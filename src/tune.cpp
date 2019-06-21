@@ -4,8 +4,14 @@
 #include <cstring>
 #include <signal.h>
 #include <stdlib.h>
+typedef unsigned char byte;
+typedef bool boolean;
+
+#define GPIO04   4
+#define GPIO20  20
 
 bool running=true;
+byte gpio=GPIO04;
 
 #define PROGRAM_VERSION "0.1"
 
@@ -15,8 +21,9 @@ void print_usage(void)
 
 fprintf(stderr,\
 "\ntune -%s\n\
-Usage:\ntune  [-f Frequency] [-h] \n\
+Usage:\ntune  [-f Frequency][-g GPIO] [-h]\n\
 -f float      frequency carrier Hz(50 kHz to 1500 MHz),\n\
+-g GPIO port (4 or 20, default 4),\n\
 -e exit immediately without killing the carrier,\n\
 -p set clock ppm instead of ntp adjust\n\
 -h            help (this help).\n\
@@ -43,7 +50,7 @@ int main(int argc, char* argv[])
 	float ppm=1000.0;
 	while(1)
 	{
-		a = getopt(argc, argv, "f:ehp:");
+		a = getopt(argc, argv, "f:eg:hp:");
 	
 		if(a == -1) 
 		{
@@ -56,6 +63,14 @@ int main(int argc, char* argv[])
 		{
 		case 'f': // Frequency
 			SetFrequency = atof(optarg);
+			break;
+		case 'g': //GPIO
+			gpio=atoi(optarg);
+			fprintf(stderr,"tune: GPIO(%s)  set\n",optarg);
+			if (gpio!=GPIO04 && gpio!=GPIO20) {
+			   //fprintf(stderr,"tune: ERROR, invalid GPIO set, 4 or 20 are valid\n",optarg);
+			   gpio=GPIO04;
+			}
 			break;
 		case 'e': //End immediately
 			NotKill=true;
@@ -100,7 +115,7 @@ int main(int argc, char* argv[])
     }
 
 		generalgpio gengpio;
-		gengpio.setpulloff(4);
+		gengpio.setpulloff(gpio);
 		padgpio pad;
 		pad.setlevel(7);
 		clkgpio *clk=new clkgpio;
@@ -109,7 +124,7 @@ int main(int argc, char* argv[])
 			clk->Setppm(ppm);
 		clk->SetCenterFrequency(SetFrequency,10);
 		clk->SetFrequency(000);
-		clk->enableclk(4);
+		clk->enableclk(gpio);
 		
 		//clk->enableclk(6);//CLK2 : experimental
 		//clk->enableclk(20);//CLK1 duplicate on GPIO20 for more power ?
@@ -119,8 +134,8 @@ int main(int argc, char* argv[])
 			{
 				sleep(1);
 			}
-			clk->disableclk(4);
-			clk->disableclk(20);
+			clk->disableclk(gpio);
+			//clk->disableclk(20);
 			delete(clk);
 		}
 		else

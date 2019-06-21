@@ -7,9 +7,9 @@ CCP = c++
 CC = cc
 
 CFLAGS_Pissb	= -Wall -g -O2 -Wno-unused-variable
-LDFLAGS_Pissb	= librpitx/src/librpitx.a -lm -lrt -lpthread -lsndfile -lliquid
+LDFLAGS_Pissb	= /home/pi/librpitx/src/librpitx.a -lm -lrt -lpthread -lsndfile -lliquid
 
-../pissb: ssbgen/test_ssb.c ssbgen/ssb_gen.c ssbgen/liquid_ssb.c librpitx/src/librpitx.a
+../pissb: ssbgen/test_ssb.c ssbgen/ssb_gen.c ssbgen/liquid_ssb.c /home/pi/librpitx/src/librpitx.a
 	$(CC) $(CFLAGS_Pissb) -o ../pissb ssbgen/liquid_ssb.c $(LDFLAGS_Pissb)
 
 ../pisstv : sstv/pisstv.cpp librpitx/src/librpitx.a

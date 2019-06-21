@@ -11,18 +11,24 @@
 #include "ft8_lib/ft8/constants.h"
 
 #include "../librpitx/src/librpitx.h"
+typedef unsigned char byte;
+typedef bool boolean;
+#define GPIO04  4
+#define GPIO20 20
 
 bool running=true;
+byte gpio=GPIO04;
 
 #define PROGRAM_VERSION "0.1"
 
 void usage() {
     fprintf(stderr,\
 "\npift8 -%s\n\
-Usage:\npift8  [-m Message][-f Frequency][-p ppm][-o offset][-s slot][-r] [-h] \n\
+Usage:\npift8  [-m Message][-g gpio][-f Frequency][-p ppm][-o offset][-s slot][-r] [-h] \n\
 -m message to transmit (13 caracters)\n\
 -f float      frequency carrier Hz(50 kHz to 1500 MHz),\n\
 -p set clock ppm instead of ntp adjust\n\
+-g set GPIO pin to transmit\n\
 -o set frequency offset(0-2500Hz) default:1240\n\
 -s set time slot to transmit 0 or 1 (2 is always)\n\
 -r repeat (every 15s)\n\
@@ -59,7 +65,7 @@ int main(int argc, char **argv) {
     
    
     int a;
-	int anyargs = 0;
+    int anyargs = 0;
 
     float frequency=14.07e6;
     float ppm=1000;
@@ -70,7 +76,7 @@ int main(int argc, char **argv) {
     float RampRatio=0;
     while(1)
 	{
-		a = getopt(argc, argv, "m:f:p:hro:s:e:");
+		a = getopt(argc, argv, "m:f:p:hg:ro:s:e:");
 	
 		if(a == -1) 
 		{
@@ -90,7 +96,14 @@ int main(int argc, char **argv) {
 		case 'f': // Frequency
 			frequency = atof(optarg);
 			break;
-		
+		case 'g': //GPIO
+			gpio=atoi(optarg);
+		 	fprintf(stderr,"pift8: GPIO pin(%s) selected\n",optarg);
+			if (gpio != GPIO04 && gpio != GPIO20) {
+			   //fprintf(stderr,"pift8: Invalid GPIO pin, 4 or 20\n",optarg);
+			   gpio=GPIO04;
+			}
+			break;
 		case 'p': //ppm
 			ppm=atof(optarg);
 			break;	
@@ -103,7 +116,7 @@ int main(int argc, char **argv) {
 			break;
         case 's': // time slot
 			slot=atoi(optarg);
-            fprintf(stderr,"slot=%d\n",slot);
+          		fprintf(stderr,"slot=%d\n",slot);
 			break;
         case 'o': // frequency offset
 			offset=atof(optarg);
@@ -177,13 +190,14 @@ int main(int argc, char **argv) {
     fskburst fsk(frequency+offset, 6.25, Deviation, 14, FifoSize,Upsample,RampRatio);
     if(ppm!=1000)
     {	//ppm is set else use ntp
-			fsk.Setppm(ppm);
+	    fsk.Setppm(ppm);
             fsk.SetCenterFrequency(frequency,50);            
     }    
-	//padgpio pad;
-	//pad.setlevel(7);// Set max power
-
-	unsigned char Symbols[FifoSize];
+	
+    //padgpio pad;
+    //pad.setlevel(7);// Set max power
+ 
+    unsigned char Symbols[FifoSize];
     
     for(size_t i=0;(i<ft8::NN)&&running;i++)
     {
@@ -203,8 +217,10 @@ int main(int argc, char **argv) {
     {
         if(!running) exit(0);
         fprintf(stderr,"Tx!\n");
+        fsk.enableclk(gpio);
         fsk.SetSymbols(Symbols, (ft8::NN));
         fsk.stop();
+        fsk.disableclk(gpio);
         fprintf(stderr,"End of Tx\n");
         if(repeat)
         {
@@ -215,4 +231,5 @@ int main(int argc, char **argv) {
               wait_every(15,0);
         }    
     }  while(repeat&&running);  
+    //fsk.disableclk(gpio);
 }
