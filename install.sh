@@ -6,7 +6,7 @@ sudo apt-get update
 sudo apt-get install -y libsndfile1-dev git
 sudo apt-get install -y imagemagick libfftw3-dev
 #For rtl-sdr use
-sudo apt-get install -y rtl-sdr buffer
+#sudo apt-get install -y rtl-sdr buffer
 # We use CSDR as a dsp for analogs modes thanks to HA7ILM
 git clone https://github.com/simonyiszk/csdr
 patch -i csdrpizero.diff csdr/Makefile
@@ -30,7 +30,8 @@ cd .. || exit
 
 printf "\n\n"
 printf "In order to run properly, rpitx need to modify /boot/config.txt. Are you sure (y/n) "
-read -r CONT
+#read -r CONT
+CONT="y"
 
 if [ "$CONT" = "y" ]; then
   echo "Set GPU to 250Mhz in order to be stable"
