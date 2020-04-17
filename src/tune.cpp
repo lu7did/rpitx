@@ -4,6 +4,17 @@
 #include <cstring>
 #include <signal.h>
 #include <stdlib.h>
+#include <fcntl.h>
+#include <string.h>
+#include <errno.h>
+#include <string.h>
+#include <time.h>
+#include<sys/wait.h>
+#include<sys/prctl.h>
+
+
+
+
 typedef unsigned char byte;
 typedef bool boolean;
 
@@ -32,11 +43,10 @@ PROGRAM_VERSION);
 
 } /* end function print_usage */
 
-static void
-terminate(int num)
+void terminate(int num)
 {
     running=false;
-	fprintf(stderr,"Caught signal - Terminating\n");
+    fprintf(stderr,"Caught signal - Terminating\n");
    
 }
 
@@ -74,6 +84,7 @@ int main(int argc, char* argv[])
 			break;
 		case 'e': //End immediately
 			NotKill=true;
+                        running=false;
 			break;
 		case 'p': //ppm
 			ppm=atof(optarg);
@@ -128,21 +139,48 @@ int main(int argc, char* argv[])
 		
 		//clk->enableclk(6);//CLK2 : experimental
 		//clk->enableclk(20);//CLK1 duplicate on GPIO20 for more power ?
-		if(!NotKill)
-		{
-			while(running)
-			{
-				sleep(1);
-			}
-			clk->disableclk(gpio);
-			//clk->disableclk(20);
-			delete(clk);
-		}
-		else
-		{
-			//Ugly method : not destroying clk object will not call destructor thus leaving clk running 
-		}
-	
-	
-}	
+//*****************************************************************************************************************************
+// *-----------
+// *----------- Patch to process commands received thru standard input, change frequency at this point
+// *----------- 
+    int fdin = open("/dev/stdin", O_RDWR, S_IRUSR | S_IWUSR);
+// read the current settings first
+    int flags = fcntl(fdin, F_GETFL, 0);
+// then, set the O_NONBLOCK flag
+        fcntl(fdin, F_SETFL, flags | O_NONBLOCK);
+
+  char* buffin;
+  char* cmdin;
+  int   p=0;
+  int   j=0;
+        buffin=(char*)malloc(129);
+        cmdin=(char*)malloc(129);
+        fprintf(stderr,"*** Starting command mode\n");
+
+	while(running==true) {
+         int nreadin=read(fdin,buffin,128);
+             if (nreadin!=-1) {
+                for(int j=0; j<nreadin; j++) {
+                    cmdin[p]=buffin[j];
+                    p++;
+                    if (buffin[j]==0x00) {
+                       //controller.freq_len=0;
+                       float f = atof((char*)cmdin);
+                       fprintf(stderr,"*** tune center frequency set to (%g)\n",f);
+                       //controller.freq_len++;
+                       p=0;
+                    }
+                    if (p>=128) {
+                       p=0;
+                    }
+                }
+             }
+             usleep(100000);
+	}
+
+        if (NotKill==false) {
+	   clk->disableclk(gpio);
+	   delete(clk);
+	}
+}
 
